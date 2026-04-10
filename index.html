@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ITD Bridge Data Lookup</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
@@ -34,8 +36,9 @@
                         </div>
                     </div>
                     <button onclick="lookupBridge()" id="searchBtn"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50">
-                        Search
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span>Search</span>
                     </button>
                 </div>
             </div>
