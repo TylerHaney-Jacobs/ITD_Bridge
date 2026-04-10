@@ -4,54 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ITD Bridge Data Lookup</title>
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PapaParse for CSV parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        #autocomplete-list::-webkit-scrollbar { width: 8px; }
+        #autocomplete-list::-webkit-scrollbar-track { background: #f1f1f1; }
+        #autocomplete-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .active-selection { background-color: #eff6ff; border-left: 4px solid #3b82f6; }
+        .pt-10 { padding-top: 1.5rem !important; }
+        .mb-8 { margin-bottom: 1.0rem !important; }
+        .mb-6 { padding-top: 1.0rem; }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-12">
+<body class="bg-slate-50 min-h-screen pb-20 text-slate-900 font-sans">
 
-    <div class="max-w-4xl mx-auto px-4 pt-10">
-        <!-- Header -->
-        <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
-            <h1 class="text-2xl font-bold text-blue-800 mb-2">ITD Bridge Data Lookup</h1>
-            <p class="text-gray-600 mb-6">Enter a BRIDGEID below to retrieve records from the ITD database.</p>
+    <div class="max-w-6xl mx-auto px-4 pt-10">
+        <!-- Search Card -->
+        <div class="bg-white rounded-xl shadow-xl p-6 mb-8 border border-slate-200">
+            <h1 class="text-3xl font-extrabold text-slate-800 mb-2 tracking-tight">ITD Bridge Data Lookup</h1>
             
-            <div class="flex flex-col sm:flex-row gap-4">
-                <input type="text" id="bridgeInput" placeholder="e.g. 12345" 
-                    class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none uppercase">
-                <button onclick="lookupBridge()" id="searchBtn"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md transition duration-200 disabled:opacity-50">
-                    Search Bridge
-                </button>
+            <div class="relative mt-6">
+                <div class="flex flex-col md:flex-row gap-3">
+                    <div class="relative flex-1">
+                        <input autocomplete="off" type="text" id="bridgeInput" 
+                            placeholder="Enter Bridge ID (e.g. 15110)..." 
+                            class="w-full px-5 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-0 focus:outline-none uppercase font-bold text-lg shadow-sm transition-all">
+                        <div id="autocomplete-list" 
+                            class="absolute z-50 w-full bg-white mt-2 border border-slate-200 rounded-xl shadow-2xl hidden max-h-80 overflow-y-auto">
+                        </div>
+                    </div>
+                    <button onclick="lookupBridge()" id="searchBtn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50">
+                        Search
+                    </button>
+                </div>
             </div>
-            <p id="statusMsg" class="mt-3 text-sm text-gray-500 italic">Loading database...</p>
+            <div class="mt-4 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span id="statusDot" class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <p id="statusMsg" class="text-xs font-bold text-slate-400 uppercase tracking-widest">Initializing DB...</p>
+                </div>
+            </div>
         </div>
 
         <!-- Results Section -->
         <div id="resultsWrapper" class="hidden">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-800">Bridge Details</h2>
-                <button onclick="copyToExcel()" 
-                    class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded transition flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="Wait, what? 8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                    <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg" id="displayId">--</span>
+                    Results
+                </h2>
+                <button onclick="copyToExcel(event)" 
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition-all flex items-center gap-2 active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
-                    Copy for Excel
+                    Copy Values for Excel
                 </button>
             </div>
 
-            <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
-                <table class="min-w-full divide-y divide-gray-200" id="resultsTable">
-                    <thead class="bg-gray-50">
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-800 text-white">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Field Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                            <th class="px-6 py-4 text-left text-[10px] uppercase tracking-widest font-bold">Bridge DB Column</th>
+                            <th class="px-6 py-4 text-left text-[10px] uppercase tracking-widest font-bold">Data Item</th>
+                            <th class="px-6 py-4 text-left text-[10px] uppercase tracking-widest font-bold">SNBI ID</th>
+                            <th class="px-6 py-4 text-left text-[10px] uppercase tracking-widest font-bold bg-slate-700 text-blue-300">Value</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200 text-sm">
-                        <!-- Rows injected here -->
-                    </tbody>
+                    <tbody id="tableBody" class="divide-y divide-slate-100 text-sm"></tbody>
                 </table>
             </div>
         </div>
@@ -60,100 +82,190 @@
     <script>
         const CSV_URL = 'https://raw.githubusercontent.com/TylerHaney-Jacobs/ITD_Bridge/refs/heads/main/bridge_db.csv';
         
-        // The specific order requested
-        const fieldOrder = [
-            "DATADATE", "BRIDGEID", "BRIDGENAME", "BRIDGELOCATION", "YEARBUILT", 
-            "TOTALLENGTH", "FASTACTVEHICLE", "FACILITYCARRIED", "MILEPOINT", 
-            "AGENCYMILEPOST", "FEATUREINTERSECTED", "MAXSPANLENGTH", "NHSDESIGNATION", 
-            "ID_DRAW_ID", "DISTRICT", "COUNTY", "OWNER", "MAINTENANCERESPONSIBILITY", 
-            "ADMINAREA", "LATITUDE", "LONGITUDE", "NUMBEROFSPANS", "SPANMATERIAL", 
-            "SPANCONTINUITY", "DECKINTERACTION", "DECKMATERIALTYPE", 
-            "FUNCTIONALCLASSIFICATION", "AADTYEAR", "AADT", "ADTT", 
-            "BYPASSDETOURLENGTH", "ID_SURFACE_ASPHALT", "ID_SURFACE_CONCRETE", 
-            "ID_SURFACE_GRANULAR", "ID_SURFACE_TIMBER", "DESIGNLOAD", "INSPDATE", 
-            "INSPECTIONINTERVAL", "DECKRATING", "SUPERSTRUCTURERATING", 
-            "SUBSTRUCTURERATING", "CULVERTRATING", "SCOURRATING"
+        // This is the "Master List" of 44 items
+        const fieldMapping = [
+            { db: "DATADATE", label: "Data Date", snbi: "" },
+            { db: "BRIDGEID", label: "Bridge Number", snbi: "B.ID.01" },
+            { db: "BRIDGENAME", label: "Bridge Name", snbi: "B.ID.02" },
+            { db: "BRIDGELOCATION", label: "Bridge Location", snbi: "B.L.11" },
+            { db: "YEARBUILT", label: "Year Built", snbi: "B.W.01" },
+            { db: "TOTALLENGTH", label: "Total Bridge Length", snbi: "B.G.02" },
+            { db: "FASTACTVEHICLE", label: "Does Fast Act Apply?", snbi: "" },
+            { db: "FACILITYCARRIED", label: "Feature Carried on Bridge", snbi: "B.F.03" },
+            { db: "MILEPOINT", label: "LRS Mile Point", snbi: "B.H.07" },
+            { db: "AGENCYMILEPOST", label: "Agency Mile Point", snbi: "" },
+            { db: "FEATUREINTERSECTED", label: "Feature Intersected (Below Bridge)", snbi: "B.F.03" },
+            { db: "MAXSPANLENGTH", label: "Maximum Span Length", snbi: "B.G.03" },
+            { db: "NHSDESIGNATION", label: "NHS Designation", snbi: "B.H.03" },
+            { db: "ID_DRAW_ID", label: "Drawing Number", snbi: "" },
+            { db: "DISTRICT", label: "Highway Agency District", snbi: "B.L.04" },
+            { db: "COUNTY", label: "County Code", snbi: "B.L.02" },
+            { db: "OWNER", label: "Owner", snbi: "B.CL.01" },
+            { db: "MAINTENANCERESPONSIBILITY", label: "Maintenance Responsibility", snbi: "B.CL.02" },
+            { db: "ADMINAREA", label: "Administrative Jurisdiction", snbi: "" },
+            { db: "LATITUDE", label: "Latitude", snbi: "B.L.05" },
+            { db: "LONGITUDE", label: "Longitude", snbi: "B.L.06" },
+            { db: "NUMBEROFSPANS", label: "Number of Spans", snbi: "B.SP.02" },
+            { db: "SPANMATERIAL", label: "Span Material", snbi: "B.SP.04" },
+            { db: "SPANCONTINUITY", label: "Span Continuity", snbi: "B.SP.05" },
+            { db: "SPANTYPE", label: "Span Type", snbi: "B.SP.06" }, // Currently missing in DB
+            { db: "DECKINTERACTION", label: "Deck Interaction", snbi: "B.SP.08" },
+            { db: "DECKMATERIALTYPE", label: "Deck Material and Type", snbi: "B.SP.09" },
+            { db: "FUNCTIONALCLASSIFICATION", label: "Functional Classification", snbi: "B.H.01" },
+            { db: "AADTYEAR", label: "Year of Annual Average Daily Traffic", snbi: "B.H.11" },
+            { db: "AADT", label: "Annual Average Daily Traffic (AADT)", snbi: "B.H.09" },
+            { db: "ADTT", label: "Annual Average Daily Truck Traffic (ADTT)", snbi: "B.H.10" },
+            { db: "BYPASSDETOURLENGTH", label: "Bypass Detour Length", snbi: "B.H.17" },
+            { db: "ID_SURFACE_ASPHALT", label: "Asphalt Wearing Surface Thickness", snbi: "" },
+            { db: "ID_SURFACE_CONCRETE", label: "Concrete Wearing Surface Thickness", snbi: "" },
+            { db: "ID_SURFACE_GRANULAR", label: "Granular Wearing Surface Thickness", snbi: "" },
+            { db: "ID_SURFACE_TIMBER", label: "Timber Wearing Surface Thickness", snbi: "" },
+            { db: "DESIGNLOAD", label: "Design Load", snbi: "B.LR.01" },
+            { db: "INSPDATE", label: "Inspection Completion Date", snbi: "B.IE.03" },
+            { db: "INSPECTIONINTERVAL", label: "Inspection Interval", snbi: "B.IE.05" },
+            { db: "DECKRATING", label: "Deck Condition Rating", snbi: "B.C.01" },
+            { db: "SUPERSTRUCTURERATING", label: "Superstructure Condition Rating", snbi: "B.C.02" },
+            { db: "SUBSTRUCTURERATING", label: "Substructure Condition Rating", snbi: "B.C.03" },
+            { db: "CULVERTRATING", label: "Culvert Condition Rating", snbi: "B.C.04" },
+            { db: "SCOURRATING", label: "Scour Condition Rating", snbi: "B.C.11" }
         ];
 
         let bridgeData = [];
+        let currentSelectedBridge = null; // Store current object for copy logic
+        let currentFocus = -1;
 
-        // Load data on start
+        const input = document.getElementById('bridgeInput');
+        const listContainer = document.getElementById('autocomplete-list');
+
         window.onload = function() {
-            const statusMsg = document.getElementById('statusMsg');
-            const searchBtn = document.getElementById('searchBtn');
-            searchBtn.disabled = true;
-
             Papa.parse(CSV_URL, {
-                download: true,
-                header: true,
-                skipEmptyLines: true,
+                download: true, header: true, skipEmptyLines: true,
                 complete: function(results) {
                     bridgeData = results.data;
-                    statusMsg.innerText = "Database loaded. Ready to search.";
-                    searchBtn.disabled = false;
-                },
-                error: function(err) {
-                    statusMsg.innerText = "Error loading database. Please check connection.";
-                    statusMsg.classList.add('text-red-500');
+                    document.getElementById('statusMsg').innerText = "Database Connected";
+                    document.getElementById('statusDot').classList.replace('bg-amber-500', 'bg-emerald-500');
+                    document.getElementById('statusDot').classList.remove('animate-pulse');
                 }
             });
         };
 
+        // Reusable function to process logic for single line, Y/N, etc.
+        function getProcessedValue(fieldDbKey, rawVal) {
+            if (rawVal === undefined || rawVal === null) return "";
+            let clean = String(rawVal).trim();
+
+            if (fieldDbKey === "BRIDGELOCATION") return clean.split(/\r?\n/)[0].trim();
+            if (fieldDbKey === "FASTACTVEHICLE") {
+                if (clean === "0") return "N";
+                if (clean === "1") return "Y";
+            }
+            if (fieldDbKey === "NHSDESIGNATION") {
+                if (clean === "N") return "N Non-NHS";
+                if (clean === "Y") return "Y NHS";
+            }
+            return clean;
+        }
+
+        // --- Autocomplete & Search UI Logic ---
+        input.addEventListener('input', function() {
+            const val = this.value.toUpperCase();
+            closeAllLists();
+            if (!val) return;
+            const startsWith = [], contains = [];
+            bridgeData.forEach(item => {
+                const id = String(item.BRIDGEID).toUpperCase();
+                if (id.startsWith(val)) startsWith.push(item);
+                else if (id.includes(val)) contains.push(item);
+            });
+            [...startsWith, ...contains].slice(0, 10).forEach(item => {
+                const div = document.createElement('div');
+                div.className = "px-5 py-3 cursor-pointer border-b border-slate-50 last:border-none hover:bg-blue-50 flex justify-between items-center transition-colors";
+                div.innerHTML = `<div><div class="font-bold text-slate-900">${item.BRIDGEID}</div><div class="text-[10px] text-slate-400 font-bold uppercase truncate max-w-[200px]">${item.BRIDGENAME || ''}</div></div><span class="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded">SELECT</span>`;
+                div.addEventListener('click', () => { input.value = item.BRIDGEID; closeAllLists(); lookupBridge(); });
+                listContainer.appendChild(div);
+            });
+            if (listContainer.children.length > 0) listContainer.classList.remove('hidden');
+        });
+
+        input.addEventListener('keydown', e => {
+            const items = listContainer.children;
+            if (e.keyCode == 40) { currentFocus++; addActive(items); }
+            else if (e.keyCode == 38) { currentFocus--; addActive(items); }
+            else if (e.keyCode == 13) {
+                e.preventDefault();
+                if (currentFocus > -1 && items[currentFocus]) items[currentFocus].click();
+                else lookupBridge();
+            }
+        });
+
+        function addActive(items) {
+            if (!items.length) return;
+            for (let i = 0; i < items.length; i++) items[i].classList.remove('active-selection');
+            if (currentFocus >= items.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = items.length - 1;
+            items[currentFocus].classList.add('active-selection');
+            items[currentFocus].scrollIntoView({ block: 'nearest' });
+        }
+        function closeAllLists() { listContainer.innerHTML = ''; listContainer.classList.add('hidden'); currentFocus = -1; }
+        document.addEventListener('click', e => { if (e.target !== input) closeAllLists(); });
+
+        // --- Main Lookup Logic ---
         function lookupBridge() {
-            const input = document.getElementById('bridgeInput').value.trim().toUpperCase();
-            const tableBody = document.getElementById('tableBody');
-            const wrapper = document.getElementById('resultsWrapper');
-            const statusMsg = document.getElementById('statusMsg');
-
-            if (!input) return;
-
-            // Find bridge by BRIDGEID
-            const bridge = bridgeData.find(b => b.BRIDGEID && b.BRIDGEID.toString().toUpperCase() === input);
-
+            const val = input.value.trim().toUpperCase();
+            if (!val) return;
+            closeAllLists();
+            const bridge = bridgeData.find(b => String(b.BRIDGEID).toUpperCase() === val);
             if (bridge) {
-                statusMsg.innerText = "Found data for: " + input;
-                statusMsg.classList.remove('text-red-500');
-                wrapper.classList.remove('hidden');
+                currentSelectedBridge = bridge; // Save for copy logic
+                document.getElementById('displayId').innerText = val;
+                document.getElementById('resultsWrapper').classList.remove('hidden');
+                const tableBody = document.getElementById('tableBody');
                 tableBody.innerHTML = '';
 
-                fieldOrder.forEach(field => {
+                fieldMapping.forEach(field => {
                     const row = document.createElement('tr');
-                    const val = bridge[field] !== undefined ? bridge[field] : "";
+                    const exists = field.db in bridge;
+                    const val = getProcessedValue(field.db, exists ? bridge[field.db] : "");
                     
+                    row.className = "hover:bg-slate-50 transition-colors";
                     row.innerHTML = `
-                        <td class="px-6 py-3 font-medium text-gray-700 bg-gray-50">${field}</td>
-                        <td class="px-6 py-3 text-gray-900 data-value">${val}</td>
+                        <td class="px-6 py-4 font-mono text-[11px] text-slate-400 uppercase">${field.db}</td>
+                        <td class="px-6 py-4 font-bold text-slate-700 text-xs">${field.label}</td>
+                        <td class="px-6 py-4 font-mono text-[11px] text-blue-600 font-bold">${field.snbi}</td>
+                        <td class="px-6 py-4 text-slate-900 font-semibold bg-slate-50/40">
+                            ${val} ${!exists ? '<span class="text-[9px] text-amber-500 font-bold ml-2 italic">(Missing from DB)</span>' : ''}
+                        </td>
                     `;
                     tableBody.appendChild(row);
                 });
-            } else {
-                statusMsg.innerText = "No bridge found with ID: " + input;
-                statusMsg.classList.add('text-red-500');
-                wrapper.classList.add('hidden');
             }
         }
 
-        function copyToExcel() {
-            // Get all displayed values in order
-            const values = Array.from(document.querySelectorAll('.data-value'))
-                                .map(td => td.innerText);
+        // --- EXPLICIT COPY LOGIC ---
+        function copyToExcel(event) {
+            if (!currentSelectedBridge) return;
             
-            // Join with newlines to create a vertical list
-            const copyString = values.join('\n');
+            // Loop through the fixed array of 44 items, NOT the HTML table
+            const copyLines = fieldMapping.map(field => {
+                const exists = field.db in currentSelectedBridge;
+                const rawVal = exists ? currentSelectedBridge[field.db] : "";
+                const finalVal = getProcessedValue(field.db, rawVal);
+                return finalVal;
+            });
+
+            const copyString = copyLines.join('\n');
 
             navigator.clipboard.writeText(copyString).then(() => {
-                alert('Data copied to clipboard! You can now paste into an Excel column.');
-            }).catch(err => {
-                console.error('Error copying text: ', err);
+                const btn = event.target;
+                const original = btn.innerHTML;
+                btn.innerHTML = `<span>Copied 44 Items!</span>`;
+                btn.classList.replace('bg-emerald-600', 'bg-slate-800');
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.classList.replace('bg-slate-800', 'bg-emerald-600');
+                }, 2000);
             });
         }
-
-        // Allow "Enter" key to search
-        document.getElementById("bridgeInput").addEventListener("keyup", function(event) {
-            if (event.key === "Enter") {
-                lookupBridge();
-            }
-        });
     </script>
 </body>
 </html>
