@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITD Bridge Data Lookup</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen pb-12">
+
+    <div class="max-w-4xl mx-auto px-4 pt-10">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+            <h1 class="text-2xl font-bold text-blue-800 mb-2">ITD Bridge Data Lookup</h1>
+            <p class="text-gray-600 mb-6">Enter a BRIDGEID below to retrieve records from the ITD database.</p>
+            
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input type="text" id="bridgeInput" placeholder="e.g. 12345" 
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none uppercase">
+                <button onclick="lookupBridge()" id="searchBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md transition duration-200 disabled:opacity-50">
+                    Search Bridge
+                </button>
+            </div>
+            <p id="statusMsg" class="mt-3 text-sm text-gray-500 italic">Loading database...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsWrapper" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Bridge Details</h2>
+                <button onclick="copyToExcel()" 
+                    class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded transition flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="Wait, what? 8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    Copy for Excel
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200" id="resultsTable">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Field Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200 text-sm">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CSV_URL = 'https://raw.githubusercontent.com/TylerHaney-Jacobs/ITD_Bridge/refs/heads/main/bridge_db.csv';
+        
+        // The specific order requested
+        const fieldOrder = [
+            "DATADATE", "BRIDGEID", "BRIDGENAME", "BRIDGELOCATION", "YEARBUILT", 
+            "TOTALLENGTH", "FASTACTVEHICLE", "FACILITYCARRIED", "MILEPOINT", 
+            "AGENCYMILEPOST", "FEATUREINTERSECTED", "MAXSPANLENGTH", "NHSDESIGNATION", 
+            "ID_DRAW_ID", "DISTRICT", "COUNTY", "OWNER", "MAINTENANCERESPONSIBILITY", 
+            "ADMINAREA", "LATITUDE", "LONGITUDE", "NUMBEROFSPANS", "SPANMATERIAL", 
+            "SPANCONTINUITY", "DECKINTERACTION", "DECKMATERIALTYPE", 
+            "FUNCTIONALCLASSIFICATION", "AADTYEAR", "AADT", "ADTT", 
+            "BYPASSDETOURLENGTH", "ID_SURFACE_ASPHALT", "ID_SURFACE_CONCRETE", 
+            "ID_SURFACE_GRANULAR", "ID_SURFACE_TIMBER", "DESIGNLOAD", "INSPDATE", 
+            "INSPECTIONINTERVAL", "DECKRATING", "SUPERSTRUCTURERATING", 
+            "SUBSTRUCTURERATING", "CULVERTRATING", "SCOURRATING"
+        ];
+
+        let bridgeData = [];
+
+        // Load data on start
+        window.onload = function() {
+            const statusMsg = document.getElementById('statusMsg');
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.disabled = true;
+
+            Papa.parse(CSV_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    bridgeData = results.data;
+                    statusMsg.innerText = "Database loaded. Ready to search.";
+                    searchBtn.disabled = false;
+                },
+                error: function(err) {
+                    statusMsg.innerText = "Error loading database. Please check connection.";
+                    statusMsg.classList.add('text-red-500');
+                }
+            });
+        };
+
+        function lookupBridge() {
+            const input = document.getElementById('bridgeInput').value.trim().toUpperCase();
+            const tableBody = document.getElementById('tableBody');
+            const wrapper = document.getElementById('resultsWrapper');
+            const statusMsg = document.getElementById('statusMsg');
+
+            if (!input) return;
+
+            // Find bridge by BRIDGEID
+            const bridge = bridgeData.find(b => b.BRIDGEID && b.BRIDGEID.toString().toUpperCase() === input);
+
+            if (bridge) {
+                statusMsg.innerText = "Found data for: " + input;
+                statusMsg.classList.remove('text-red-500');
+                wrapper.classList.remove('hidden');
+                tableBody.innerHTML = '';
+
+                fieldOrder.forEach(field => {
+                    const row = document.createElement('tr');
+                    const val = bridge[field] !== undefined ? bridge[field] : "";
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-3 font-medium text-gray-700 bg-gray-50">${field}</td>
+                        <td class="px-6 py-3 text-gray-900 data-value">${val}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } else {
+                statusMsg.innerText = "No bridge found with ID: " + input;
+                statusMsg.classList.add('text-red-500');
+                wrapper.classList.add('hidden');
+            }
+        }
+
+        function copyToExcel() {
+            // Get all displayed values in order
+            const values = Array.from(document.querySelectorAll('.data-value'))
+                                .map(td => td.innerText);
+            
+            // Join with newlines to create a vertical list
+            const copyString = values.join('\n');
+
+            navigator.clipboard.writeText(copyString).then(() => {
+                alert('Data copied to clipboard! You can now paste into an Excel column.');
+            }).catch(err => {
+                console.error('Error copying text: ', err);
+            });
+        }
+
+        // Allow "Enter" key to search
+        document.getElementById("bridgeInput").addEventListener("keyup", function(event) {
+            if (event.key === "Enter") {
+                lookupBridge();
+            }
+        });
+    </script>
+</body>
+</html>
